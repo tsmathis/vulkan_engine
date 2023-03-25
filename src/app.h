@@ -2,6 +2,7 @@
 
 #include "live_window.h"
 #include "live_pipeline.h"
+#include "engine_device.h"
 
 namespace live {
 	class Application {
@@ -13,6 +14,12 @@ namespace live {
 
 	private:
 		LiveWindow liveWindow{WIDTH, HEIGHT, "Hello Vulkan"};
-		LivePipeline livePipeline{"shaders/simple_shader.vert.spv", "shaders/simple_shader.frag.spv"};
+		LiveDevice liveDevice{ liveWindow };
+		LivePipeline livePipeline{
+			liveDevice, 
+			"shaders/simple_shader.vert.spv", 
+			"shaders/simple_shader.frag.spv", 
+			LivePipeline::defaultPipelineConfigInfo(WIDTH, HEIGHT)
+		};
 	};
 }
