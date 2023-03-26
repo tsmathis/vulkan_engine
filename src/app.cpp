@@ -3,6 +3,24 @@
 #include <array>
 #include <stdexcept>
 
+
+void sierpinskiTri(std::vector<live::Model::Vertex>& vertices, int depth, glm::vec2 top, glm::vec2 right, glm::vec2 left) {
+	if (depth <= 0) {
+		vertices.push_back({ top,   { 1.0f, 0.0f, 0.0f } });
+		vertices.push_back({ right, { 0.0f, 1.0f, 0.0f } });
+		vertices.push_back({ left,  { 0.0f, 0.0f, 1.0f } });
+	} else {
+		auto leftTop  = 0.5f * (left + top);
+		auto rightTop = 0.5f * (right + top);
+		auto bottom   = 0.5f * (left + right);
+
+		sierpinskiTri(vertices, depth - 1, top, rightTop, leftTop);
+		sierpinskiTri(vertices, depth - 1, rightTop, right, bottom);
+		sierpinskiTri(vertices, depth - 1, leftTop, bottom, left);
+	}
+}
+
+
 namespace live {
 
 	Application::Application() {
@@ -24,11 +42,10 @@ namespace live {
 	}
 
 	void Application::loadModels() {
-		std::vector<Model::Vertex> vertices{
-			{ { 0.0f, -0.5f} },
-			{ { 0.5f,  0.5f} },
-			{ {-0.5f,  0.5f} }
-		};
+
+		std::vector<Model::Vertex> vertices{};
+
+		sierpinskiTri(vertices, 2, {0.0f, -0.7f}, {0.7f, 0.7f}, {-0.7f, 0.7f});
 
 		model = std::make_unique<Model>(liveDevice, vertices);
 	}
