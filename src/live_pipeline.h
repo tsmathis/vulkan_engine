@@ -30,7 +30,8 @@ namespace live {
 			const std::string& vertFilePath, 
 			const std::string& fragFilePath, 
 			const PipelineConfigInfo& configInfo);
-		~LivePipeline() {}
+		
+		~LivePipeline();
 
 		LivePipeline(const LivePipeline&) = delete;
 		void operator=(const LivePipeline&) = delete;
