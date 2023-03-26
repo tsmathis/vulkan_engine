@@ -4,6 +4,7 @@
 #include "live_pipeline.h"
 #include "engine_device.h"
 #include "engine_swap_chain.h"
+#include "model.h"
 
 #include <memory>
 #include <vector>
@@ -23,16 +24,18 @@ namespace live {
 		void run();
 
 	private:
+		void loadModels();
 		void createPipelineLayout();
 		void createPipeline();
 		void createCommandBuffers();
 		void drawFrame();
 
-		LiveWindow liveWindow{WIDTH, HEIGHT, "Hello Vulkan"};
-		LiveDevice liveDevice{ liveWindow };
-		LiveSwapChain liveSwapChain{ liveDevice, liveWindow.getExtent() };
+		LiveWindow                    liveWindow{WIDTH, HEIGHT, "Hello Vulkan"};
+		LiveDevice                    liveDevice{ liveWindow };
+		LiveSwapChain                 liveSwapChain{ liveDevice, liveWindow.getExtent() };
 		std::unique_ptr<LivePipeline> livePipeline;
-		VkPipelineLayout pipelineLayout;
-		std::vector<VkCommandBuffer> commandBuffers;
+		VkPipelineLayout              pipelineLayout;
+		std::vector<VkCommandBuffer>  commandBuffers;
+		std::unique_ptr<Model>        model;
 	};
 }

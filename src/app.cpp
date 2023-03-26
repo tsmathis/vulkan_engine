@@ -6,6 +6,7 @@
 namespace live {
 
 	Application::Application() {
+		loadModels();
 		createPipelineLayout();
 		createPipeline();
 		createCommandBuffers();
@@ -20,6 +21,16 @@ namespace live {
 		}
 
 		vkDeviceWaitIdle(liveDevice.device());
+	}
+
+	void Application::loadModels() {
+		std::vector<Model::Vertex> vertices{
+			{ { 0.0f, -0.5f} },
+			{ { 0.5f,  0.5f} },
+			{ {-0.5f,  0.5f} }
+		};
+
+		model = std::make_unique<Model>(liveDevice, vertices);
 	}
 
 	void Application::createPipelineLayout() {
@@ -85,7 +96,8 @@ namespace live {
 			vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
 			livePipeline->bind(commandBuffers[i]);
-			vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+			model->bind(commandBuffers[i]);
+			model->draw(commandBuffers[i]);
 
 			vkCmdEndRenderPass(commandBuffers[i]);
 			if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) {
