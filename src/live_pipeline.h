@@ -10,7 +10,6 @@ namespace live {
 	struct PipelineConfigInfo {
 		VkViewport                             viewport;
 		VkRect2D                               scissor;
-		VkPipelineViewportStateCreateInfo      viewportInfo;
 		VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo;
 		VkPipelineRasterizationStateCreateInfo rasterizationInfo;
 		VkPipelineMultisampleStateCreateInfo   multisampleInfo;
@@ -34,8 +33,9 @@ namespace live {
 		~LivePipeline();
 
 		LivePipeline(const LivePipeline&) = delete;
-		void operator=(const LivePipeline&) = delete;
+		LivePipeline &operator=(const LivePipeline&) = delete;
 
+		void bind(VkCommandBuffer commandBuffer);
 		static PipelineConfigInfo defaultPipelineConfigInfo(uint32_t width, uint32_t height);
 
 	private:

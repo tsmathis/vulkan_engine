@@ -35,7 +35,7 @@ class LiveDevice {
 
   // Not copyable or movable
   LiveDevice(const LiveDevice &) = delete;
-  void operator=(const LiveDevice &) = delete;
+  LiveDevice &operator=(const LiveDevice &) = delete;
   LiveDevice(LiveDevice &&) = delete;
   LiveDevice &operator=(LiveDevice &&) = delete;
 

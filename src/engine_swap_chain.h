@@ -19,7 +19,7 @@ class LiveSwapChain {
   ~LiveSwapChain();
 
   LiveSwapChain(const LiveSwapChain &) = delete;
-  void operator=(const LiveSwapChain &) = delete;
+  LiveSwapChain &operator=(const LiveSwapChain &) = delete;
 
   VkFramebuffer getFrameBuffer(int index) { return swapChainFramebuffers[index]; }
   VkRenderPass getRenderPass() { return renderPass; }
