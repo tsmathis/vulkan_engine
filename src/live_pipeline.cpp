@@ -1,5 +1,6 @@
 #include "live_pipeline.h"
 
+#include <cassert>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
@@ -114,6 +115,10 @@ std::vector<char> live::LivePipeline::readFile(const std::string& filePath) {
 }
 
 void live::LivePipeline::createGraphicsPipeline(const std::string& vertFilePath, const std::string& fragFilePath, const PipelineConfigInfo configInfo) {
+	
+	assert(configInfo.pipelineLayout != VK_NULL_HANDLE && "Can't create graphics pipeline: No pipelineLayout provided in configInfo");
+	assert(configInfo.renderPass != VK_NULL_HANDLE && "Can't create graphics pipeline: No renderPass provided in configInfo");
+
 	auto vertCode = readFile(vertFilePath);
 	auto fragCode = readFile(fragFilePath);
 	
