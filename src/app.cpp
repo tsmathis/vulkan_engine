@@ -22,11 +22,10 @@ void sierpinskiTri(std::vector<live::Model::Vertex>& vertices, int depth, glm::v
 
 
 namespace live {
-
 	Application::Application() {
 		loadModels();
 		createPipelineLayout();
-		createPipeline();
+		recreateSwapChain();
 		createCommandBuffers();
 	}
 
@@ -42,7 +41,6 @@ namespace live {
 	}
 
 	void Application::loadModels() {
-
 		std::vector<Model::Vertex> vertices{};
 
 		sierpinskiTri(vertices, 2, {0.0f, -0.7f}, {0.7f, 0.7f}, {-0.7f, 0.7f});
@@ -64,20 +62,42 @@ namespace live {
 	}
 
 	void Application::createPipeline() {
-		auto pipelineConfig = LivePipeline::defaultPipelineConfigInfo(liveSwapChain.width(), liveSwapChain.height());
-		pipelineConfig.renderPass = liveSwapChain.getRenderPass();
+		assert(liveSwapChain != nullptr && "Cannot create pipeline before swap chain.");
+		assert(pipelineLayout != nullptr && "Cannot create pipeline before pipeline layout.");
+
+		PipelineConfigInfo pipelineConfig{};
+		LivePipeline::defaultPipelineConfigInfo(pipelineConfig);
+		pipelineConfig.renderPass     = liveSwapChain->getRenderPass();
 		pipelineConfig.pipelineLayout = pipelineLayout;
 
-		livePipeline = std::make_unique<LivePipeline>(
-			liveDevice,
-			"shaders/simple_shader.vert.spv",
-			"shaders/simple_shader.frag.spv",
-			pipelineConfig
-			);
+		livePipeline = std::make_unique<LivePipeline>(liveDevice, "shaders/simple_shader.vert.spv", "shaders/simple_shader.frag.spv", pipelineConfig);
+	}
+
+	void Application::recreateSwapChain() {
+		auto extent = liveWindow.getExtent();
+		while (extent.width == 0 || extent.height == 0) {
+			extent = liveWindow.getExtent();
+			glfwWaitEvents();
+		}
+
+		vkDeviceWaitIdle(liveDevice.device());
+		
+		if (liveSwapChain == nullptr) {
+			liveSwapChain = std::make_unique<LiveSwapChain>(liveDevice, extent);
+		} else {
+			liveSwapChain = std::make_unique<LiveSwapChain>(liveDevice, extent, std::move(liveSwapChain));
+
+			if (liveSwapChain->imageCount() != commandBuffers.size()) {
+				freeCommandBuffers();
+				createCommandBuffers();
+			}
+		}
+		
+		createPipeline();
 	}
 
 	void Application::createCommandBuffers() {
-		commandBuffers.resize(liveSwapChain.imageCount());
+		commandBuffers.resize(liveSwapChain->imageCount());
 
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -88,50 +108,80 @@ namespace live {
 		if (vkAllocateCommandBuffers(liveDevice.device(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to allocate command buffers");
 		}
+	}
 
-		for (int i = 0; i < commandBuffers.size(); i++) {
-			VkCommandBufferBeginInfo beginInfo{};
-			beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	void Application::freeCommandBuffers() {
+		vkFreeCommandBuffers(liveDevice.device(), liveDevice.getCommandPool(), static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 
-			if (vkBeginCommandBuffer(commandBuffers[i], &beginInfo) != VK_SUCCESS) {
-				throw std::runtime_error("Failed to begin recording command buffer.");
-			}
+		commandBuffers.clear();
+	}
 
-			std::array<VkClearValue, 2> clearValues{};
-			clearValues[0].color        = { 0.1f, 0.1f, 0.1f, 1.0f };
-			clearValues[1].depthStencil = { 1.0f, 0 };
+	void Application::recordCommandBuffer(int imageIndex) {
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-			VkRenderPassBeginInfo renderPassInfo{};
-			renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass        = liveSwapChain.getRenderPass();
-			renderPassInfo.framebuffer       = liveSwapChain.getFrameBuffer(i);
-			renderPassInfo.renderArea.offset = { 0, 0 };
-			renderPassInfo.renderArea.extent = liveSwapChain.getSwapChainExtent();
-			renderPassInfo.clearValueCount   = static_cast<uint32_t>(clearValues.size());
-			renderPassInfo.pClearValues = clearValues.data();
+		if (vkBeginCommandBuffer(commandBuffers[imageIndex], &beginInfo) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to begin recording command buffer.");
+		}
 
-			vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+		std::array<VkClearValue, 2> clearValues{};
+		clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
+		clearValues[1].depthStencil = { 1.0f, 0 };
 
-			livePipeline->bind(commandBuffers[i]);
-			model->bind(commandBuffers[i]);
-			model->draw(commandBuffers[i]);
+		VkRenderPassBeginInfo renderPassInfo{};
+		renderPassInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass        = liveSwapChain->getRenderPass();
+		renderPassInfo.framebuffer       = liveSwapChain->getFrameBuffer(imageIndex);
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = liveSwapChain->getSwapChainExtent();
+		renderPassInfo.clearValueCount   = static_cast<uint32_t>(clearValues.size());
+		renderPassInfo.pClearValues      = clearValues.data();
 
-			vkCmdEndRenderPass(commandBuffers[i]);
-			if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) {
-				throw std::runtime_error("Failed to record command buffer.");
-			}
+		vkCmdBeginRenderPass(commandBuffers[imageIndex], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+		VkViewport viewport{};
+		viewport.x        = 0.0f;
+		viewport.y        = 0.0f;
+		viewport.width    = static_cast<float>(liveSwapChain->getSwapChainExtent().width);
+		viewport.height   = static_cast<float>(liveSwapChain->getSwapChainExtent().height);
+		viewport.minDepth = 0.0f;
+		viewport.maxDepth = 1.0f;
+		vkCmdSetViewport(commandBuffers[imageIndex], 0, 1, &viewport);
+
+		VkRect2D scissor{ {0, 0}, liveSwapChain->getSwapChainExtent() };
+		vkCmdSetScissor(commandBuffers[imageIndex], 0, 1, &scissor);
+
+		livePipeline->bind(commandBuffers[imageIndex]);
+		model->bind(commandBuffers[imageIndex]);
+		model->draw(commandBuffers[imageIndex]);
+
+		vkCmdEndRenderPass(commandBuffers[imageIndex]);
+		if (vkEndCommandBuffer(commandBuffers[imageIndex]) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to record command buffer.");
 		}
 	}
 
 	void Application::drawFrame() {
 		uint32_t imageIndex;
-		auto result = liveSwapChain.acquireNextImage(&imageIndex);
+		auto result = liveSwapChain->acquireNextImage(&imageIndex);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR) {
+			recreateSwapChain();
+			return;
+		}
 
 		if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
 			throw std::runtime_error("Failed to acquire swapchain image.");
 		}
 
-		result = liveSwapChain.submitCommandBuffers(&commandBuffers[imageIndex], &imageIndex);
+		recordCommandBuffer(imageIndex);
+		result = liveSwapChain->submitCommandBuffers(&commandBuffers[imageIndex], &imageIndex);
+
+		if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || liveWindow.windowResized()) {
+			liveWindow.resetWindowResizedFlag();
+			recreateSwapChain();
+			return;
+		}
 
 		if (result != VK_SUCCESS) {
 			throw std::runtime_error("Failed to present swapchain image.");

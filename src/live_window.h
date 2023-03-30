@@ -14,17 +14,22 @@ namespace live {
 		LiveWindow(const LiveWindow&) = delete;
 		LiveWindow& operator=(const LiveWindow&) = delete;
 
+
 		bool shouldClose() { return glfwWindowShouldClose(window); }
-
 		VkExtent2D getExtent() { return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) }; }
-
+		bool windowResized() { return frameBufferResized; }
+		void resetWindowResizedFlag() { frameBufferResized = false; }
+		
 		void createWindowSurface(VkInstance instance, VkSurfaceKHR* surface);
+
 
 	private:
 		void initWindow();
+		static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
 
-		const int width;
-		const int height;
+		int width;
+		int height;
+		bool frameBufferResized = false;
 
 		std::string windowName;
 		GLFWwindow* window;
