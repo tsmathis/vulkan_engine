@@ -1,5 +1,10 @@
 #include "app.h"
 
+#define GLM_DEFINE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#include <glm/glm.hpp>
+#include <glm/gtc/constants.hpp>
+
 #include <array>
 #include <stdexcept>
 
@@ -22,8 +27,15 @@ void sierpinskiTri(std::vector<live::Model::Vertex>& vertices, int depth, glm::v
 
 
 namespace live {
+
+	struct SimplePushConstantData {
+		glm::mat2 transform{ 1.f };
+		glm::vec2 offset;
+		alignas(16) glm::vec3 color;
+	};
+
 	Application::Application() {
-		loadModels();
+		loadObjects();
 		createPipelineLayout();
 		recreateSwapChain();
 		createCommandBuffers();
@@ -40,21 +52,53 @@ namespace live {
 		vkDeviceWaitIdle(liveDevice.device());
 	}
 
-	void Application::loadModels() {
+	void Application::loadObjects() {
 		std::vector<Model::Vertex> vertices{};
+		sierpinskiTri(vertices, 2, { 0.0f, -0.7f }, { 0.7f, 0.7f }, { -0.7f, 0.7f });
 
-		sierpinskiTri(vertices, 2, {0.0f, -0.7f}, {0.7f, 0.7f}, {-0.7f, 0.7f});
+		std::vector<Model::Vertex> singleTri{
+			{{  0.0f, -0.5f }, { 1.0f, 0.0f, 0.0f }},
+			{{  0.5f,  0.5f }, { 0.0f, 1.0f, 0.0f }},
+			{{ -0.5f,  0.5f }, { 0.0f, 0.0f, 1.0f }}
+		};
 
-		model = std::make_unique<Model>(liveDevice, vertices);
+		auto triModel = std::make_shared<Model>(liveDevice, singleTri);
+
+		std::vector<glm::vec3> colors{
+			{ 1.0f,  0.7f,  0.73f },
+			{ 1.0f,  0.87f, 0.73f },
+			{ 1.0f,  1.0f,  0.73f },
+			{ 0.73f, 1.0f,  0.8f  },
+			{ 0.73f, 0.88f, 1.0f  }
+		};
+
+		for (auto& color : colors) {
+			color = glm::pow(color, glm::vec3{ 2.2f });
+		}
+
+		for (int i = 0; i < 40; i++){
+			auto triangle = Object::createObject();
+			triangle.model = triModel;
+			triangle.transform2D.scale = glm::vec2(0.5f) + i * 0.025f;
+			triangle.transform2D.rotation = i * 0.25f * glm::two_pi<float>();
+			triangle.color = colors[i % colors.size()];
+
+			objects.push_back(std::move(triangle));
+		}
 	}
 
 	void Application::createPipelineLayout() {
+		VkPushConstantRange pushConstantRange{};
+		pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+		pushConstantRange.offset     = 0;
+		pushConstantRange.size       = sizeof(SimplePushConstantData);
+
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType                   = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount          = 0;
 		pipelineLayoutInfo.pSetLayouts             = nullptr;
-		pipelineLayoutInfo.pushConstantRangeCount  = 0;
-		pipelineLayoutInfo.pPushConstantRanges     = nullptr;
+		pipelineLayoutInfo.pushConstantRangeCount  = 1;
+		pipelineLayoutInfo.pPushConstantRanges     = &pushConstantRange;
 
 		if (vkCreatePipelineLayout(liveDevice.device(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to create pipeline layout.");
@@ -125,7 +169,7 @@ namespace live {
 		}
 
 		std::array<VkClearValue, 2> clearValues{};
-		clearValues[0].color = { 0.1f, 0.1f, 0.1f, 1.0f };
+		clearValues[0].color = { 0.01f, 0.01f, 0.01f, 1.0f };
 		clearValues[1].depthStencil = { 1.0f, 0 };
 
 		VkRenderPassBeginInfo renderPassInfo{};
@@ -151,13 +195,38 @@ namespace live {
 		VkRect2D scissor{ {0, 0}, liveSwapChain->getSwapChainExtent() };
 		vkCmdSetScissor(commandBuffers[imageIndex], 0, 1, &scissor);
 
-		livePipeline->bind(commandBuffers[imageIndex]);
-		model->bind(commandBuffers[imageIndex]);
-		model->draw(commandBuffers[imageIndex]);
+		renderObjects(commandBuffers[imageIndex]);
 
 		vkCmdEndRenderPass(commandBuffers[imageIndex]);
 		if (vkEndCommandBuffer(commandBuffers[imageIndex]) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to record command buffer.");
+		}
+	}
+
+	void Application::renderObjects(VkCommandBuffer commandBuffer) {
+		livePipeline->bind(commandBuffer);
+
+		int i = 0;
+		for (auto& obj : objects) {
+			i += 1;
+			obj.transform2D.rotation = glm::mod<float>(obj.transform2D.rotation + 0.001f * i, 2.0f * glm::two_pi<float>());
+
+			SimplePushConstantData push{};
+			push.offset    = obj.transform2D.translation;
+			push.color     = obj.color;
+			push.transform = obj.transform2D.mat2();
+
+			vkCmdPushConstants(
+				commandBuffer,
+				pipelineLayout,
+				VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+				0,
+				sizeof(SimplePushConstantData),
+				&push
+			);
+
+			obj.model->bind(commandBuffer);
+			obj.model->draw(commandBuffer);
 		}
 	}
 

@@ -1,13 +1,15 @@
 #pragma once
 
-#include "live_window.h"
-#include "live_pipeline.h"
 #include "engine_device.h"
 #include "engine_swap_chain.h"
+#include "live_pipeline.h"
+#include "live_window.h"
 #include "model.h"
+#include "object.h"
 
 #include <memory>
 #include <vector>
+
 
 namespace live {
 	class Application {
@@ -24,7 +26,7 @@ namespace live {
 		void run();
 
 	private:
-		void loadModels();
+		void loadObjects();
 		void createPipelineLayout();
 		void createPipeline();
 		void createCommandBuffers();
@@ -32,6 +34,7 @@ namespace live {
 		void drawFrame();
 		void recreateSwapChain();
 		void recordCommandBuffer(int imageIndex);
+		void renderObjects(VkCommandBuffer commandBuffer);
 
 		LiveWindow                     liveWindow{WIDTH, HEIGHT, "Hello Vulkan"};
 		LiveDevice                     liveDevice{ liveWindow };
@@ -39,6 +42,6 @@ namespace live {
 		std::unique_ptr<LivePipeline>  livePipeline;
 		VkPipelineLayout               pipelineLayout;
 		std::vector<VkCommandBuffer>   commandBuffers;
-		std::unique_ptr<Model>         model;
+		std::vector<Object>            objects;
 	};
 }
