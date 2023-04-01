@@ -29,7 +29,12 @@ namespace live {
 
 		VkCommandBuffer getCurrentCommandBuffer() const { 
 			assert(frameStarted && "Cannot get command buffer when frame is not in progress");
-			return commandBuffers[currentImageIndex]; 
+			return commandBuffers[currentFrameIndex]; 
+		}
+
+		int getFrameINdex() const {
+			assert(frameStarted && "Cannot get frame index when frame is not in progress");
+			return currentFrameIndex;
 		}
 
 	private:
@@ -42,7 +47,7 @@ namespace live {
 		std::unique_ptr<LiveSwapChain> liveSwapChain;
 		std::vector<VkCommandBuffer>   commandBuffers;
 		uint32_t                       currentImageIndex;
-		
-		bool frameStarted = false;
+		int                            currentFrameIndex{ 0 };
+		bool                           frameStarted{ false };
 	};
 }

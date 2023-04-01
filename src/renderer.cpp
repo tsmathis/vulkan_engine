@@ -24,18 +24,17 @@ namespace live {
 			liveSwapChain = std::make_unique<LiveSwapChain>(device, extent);
 		}
 		else {
-			liveSwapChain = std::make_unique<LiveSwapChain>(device, extent, std::move(liveSwapChain));
+			std::shared_ptr<LiveSwapChain> oldSwapChain = std::move(liveSwapChain);
+			liveSwapChain = std::make_unique<LiveSwapChain>(device, extent, oldSwapChain);
 
-			if (liveSwapChain->imageCount() != commandBuffers.size()) {
-				freeCommandBuffers();
-				createCommandBuffers();
+			if (!oldSwapChain->compareSwapFormats(*liveSwapChain.get())) {
+				throw std::runtime_error("Swap chain image (or depth) format has changed.");
 			}
 		}
-
 	}
 
 	void Renderer::createCommandBuffers() {
-		commandBuffers.resize(liveSwapChain->imageCount());
+		commandBuffers.resize(LiveSwapChain::MAX_FRAMES_IN_FLIGHT);
 
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -100,6 +99,7 @@ namespace live {
 		}
 
 		frameStarted = false;
+		currentFrameIndex = (currentFrameIndex + 1) % LiveSwapChain::MAX_FRAMES_IN_FLIGHT;
 	}
 
 	void Renderer::beginSwapChainRenderPass(VkCommandBuffer commandBuffer) {
