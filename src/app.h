@@ -1,7 +1,6 @@
 #pragma once
 
 #include "engine_device.h"
-#include "live_pipeline.h"
 #include "live_window.h"
 #include "model.h"
 #include "object.h"
@@ -27,16 +26,10 @@ namespace live {
 
 	private:
 		void loadObjects();
-		void createPipelineLayout();
-		void createPipeline();
-		void renderObjects(VkCommandBuffer commandBuffer);
 
 		LiveWindow                     liveWindow{WIDTH, HEIGHT, "Hello Vulkan"};
 		LiveDevice                     liveDevice{ liveWindow };
 		Renderer                       renderer{ liveWindow, liveDevice };
-
-		std::unique_ptr<LivePipeline>  livePipeline;
-		VkPipelineLayout               pipelineLayout;
 		std::vector<Object>            objects;
 	};
 }
