@@ -12,7 +12,6 @@
 namespace live {
 	class Model {
 	public:
-
 		struct Vertex {
 			glm::vec3 position;
 			glm::vec3 color;
@@ -21,7 +20,12 @@ namespace live {
 			static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions();
 		};
 
-		Model(LiveDevice& device, const std::vector<Vertex>& vertices);
+		struct Builder {
+			std::vector<Vertex> vertices{};
+			std::vector<uint32_t> indices{};
+		};
+
+		Model(LiveDevice& device, const Model::Builder& builder);
 		~Model();
 
 		Model(const Model&) = delete;
@@ -32,10 +36,17 @@ namespace live {
 		
 	private:
 		void createVertexBuffers(const std::vector<Vertex>& vertices);
+		void createIndexBuffers(const std::vector<uint32_t>& indices);
 
 		LiveDevice&    liveDevice;
+
 		VkBuffer       vertexBuffer;
 		VkDeviceMemory vertexBufferMemory;
 		uint32_t       vertexCount;
+
+		bool           hasIndexBuffer = false;
+		VkBuffer       indexBuffer;
+		VkDeviceMemory indexBufferMemory;
+		uint32_t       indexCount;
 	};
 }
