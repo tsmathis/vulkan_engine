@@ -1,5 +1,6 @@
 #pragma once
 
+#include "camera.h"
 #include "engine_device.h"
 #include "live_pipeline.h"
 #include "model.h"
@@ -18,7 +19,7 @@ namespace live {
 		RenderSystem(const RenderSystem&) = delete;
 		RenderSystem& operator=(const RenderSystem&) = delete;
 
-		void renderObjects(VkCommandBuffer commandBuffer, std::vector<Object>& objects);
+		void renderObjects(VkCommandBuffer commandBuffer, std::vector<Object>& objects, const Camera& camera);
 
 	private:
 		void createPipelineLayout();

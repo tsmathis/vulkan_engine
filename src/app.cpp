@@ -1,4 +1,5 @@
 #include "app.h"
+#include "camera.h"
 #include "render_system.h"
 
 #define GLM_DEFINE_RADIANS
@@ -34,13 +35,20 @@ namespace live {
 
 	void Application::run() {
 		RenderSystem renderSystem{liveDevice, renderer.getSwapChainRenderPass()};
+		Camera camera{};
+		//camera.setViewDirection(glm::vec3(0.0f), glm::vec3(0.5f, 0.0f, 1.0f));
+		camera.setViewTarget(glm::vec3(-1.0f, -2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 2.5f));
 
 		while (!liveWindow.shouldClose()) {
 			glfwPollEvents();
+
+			float aspect = renderer.getAspectRatio();
+			//camera.setOrthographicProjection(-aspect, aspect, -1, 1, -1, 1);
+			camera.setPerspectiveProjection(glm::radians(50.0f), aspect, 0.1f, 10.0f);
 			
 			if (auto commandBuffer = renderer.beginFrame()) {
 				renderer.beginSwapChainRenderPass(commandBuffer);
-				renderSystem.renderObjects(commandBuffer, objects);
+				renderSystem.renderObjects(commandBuffer, objects, camera);
 				renderer.endSwapChainRenderPass(commandBuffer);
 				renderer.endFrame();
 			}
@@ -113,7 +121,7 @@ namespace live {
 
 		auto cube = Object::createObject();
 		cube.model = model;
-		cube.transform.translation = { 0.0f, 0.0f, 0.5f };
+		cube.transform.translation = { 0.0f, 0.0f, 2.5f };
 		cube.transform.scale = { 0.5f, 0.5f, 0.5f };
 
 		objects.push_back(std::move(cube));

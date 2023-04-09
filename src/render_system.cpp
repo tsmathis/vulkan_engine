@@ -52,8 +52,10 @@ namespace live {
 		livePipeline = std::make_unique<LivePipeline>(device, "shaders/simple_shader.vert.spv", "shaders/simple_shader.frag.spv", pipelineConfig);
 	}
 
-	void RenderSystem::renderObjects(VkCommandBuffer commandBuffer, std::vector<Object>& objects) {
+	void RenderSystem::renderObjects(VkCommandBuffer commandBuffer, std::vector<Object>& objects, const Camera& camera) {
 		livePipeline->bind(commandBuffer);
+
+		auto projectionView = camera.getProjectionMatrix() * camera.getViewMatrix();
 
 		int i = 0;
 		for (auto& obj : objects) {
@@ -63,7 +65,7 @@ namespace live {
 
 			SimplePushConstantData push{};
 			push.color = obj.color;
-			push.transform = obj.transform.mat4();
+			push.transform = projectionView *  obj.transform.mat4();
 
 			vkCmdPushConstants(
 				commandBuffer,

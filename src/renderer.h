@@ -25,6 +25,7 @@ namespace live {
 		void endSwapChainRenderPass(VkCommandBuffer commandBuffer);
 
 		VkRenderPass getSwapChainRenderPass() const { return liveSwapChain->getRenderPass(); }
+		float getAspectRatio() const { return liveSwapChain->extentAspectRatio(); }
 		bool frameInProgess() const { return frameStarted; }
 
 		VkCommandBuffer getCurrentCommandBuffer() const { 
