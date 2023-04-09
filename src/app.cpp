@@ -1,5 +1,7 @@
 #include "app.h"
+
 #include "camera.h"
+#include "keyboard_input.h"
 #include "render_system.h"
 
 #define GLM_DEFINE_RADIANS
@@ -8,24 +10,8 @@
 #include <glm/gtc/constants.hpp>
 
 #include <array>
+#include <chrono>
 #include <stdexcept>
-
-
-//void sierpinskiTri(std::vector<live::Model::Vertex>& vertices, int depth, glm::vec2 top, glm::vec2 right, glm::vec2 left) {
-//	if (depth <= 0) {
-//		vertices.push_back({ top,   { 1.0f, 0.0f, 0.0f } });
-//		vertices.push_back({ right, { 0.0f, 1.0f, 0.0f } });
-//		vertices.push_back({ left,  { 0.0f, 0.0f, 1.0f } });
-//	} else {
-//		auto leftTop  = 0.5f * (left + top);
-//		auto rightTop = 0.5f * (right + top);
-//		auto bottom   = 0.5f * (left + right);
-//
-//		sierpinskiTri(vertices, depth - 1, top, rightTop, leftTop);
-//		sierpinskiTri(vertices, depth - 1, rightTop, right, bottom);
-//		sierpinskiTri(vertices, depth - 1, leftTop, bottom, left);
-//	}
-//}
 
 
 namespace live {
@@ -36,14 +22,24 @@ namespace live {
 	void Application::run() {
 		RenderSystem renderSystem{liveDevice, renderer.getSwapChainRenderPass()};
 		Camera camera{};
-		//camera.setViewDirection(glm::vec3(0.0f), glm::vec3(0.5f, 0.0f, 1.0f));
 		camera.setViewTarget(glm::vec3(-1.0f, -2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 2.5f));
+
+		auto viewerObject = Object::createObject();
+		KeyboardInputController cameraController{};
+
+		auto currentTime = std::chrono::high_resolution_clock::now();
 
 		while (!liveWindow.shouldClose()) {
 			glfwPollEvents();
 
+			auto newTime = std::chrono::high_resolution_clock::now();
+			float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
+			currentTime = newTime;
+
+			cameraController.moveInPlaneXZ(liveWindow.getGLFWwindow(), frameTime, viewerObject);
+			camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
+
 			float aspect = renderer.getAspectRatio();
-			//camera.setOrthographicProjection(-aspect, aspect, -1, 1, -1, 1);
 			camera.setPerspectiveProjection(glm::radians(50.0f), aspect, 0.1f, 10.0f);
 			
 			if (auto commandBuffer = renderer.beginFrame()) {

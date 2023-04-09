@@ -60,8 +60,6 @@ namespace live {
 		int i = 0;
 		for (auto& obj : objects) {
 			i += 1;
-			obj.transform.rotation.y = glm::mod<float>(obj.transform.rotation.y + 0.01f * i, 2.0f * glm::two_pi<float>());
-			obj.transform.rotation.x = glm::mod<float>(obj.transform.rotation.x + 0.005f * i, 2.0f * glm::two_pi<float>());
 
 			SimplePushConstantData push{};
 			push.color = obj.color;
