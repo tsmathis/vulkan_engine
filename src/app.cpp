@@ -54,12 +54,12 @@ namespace live {
 	}
 
 	void Application::loadObjects() {
-		std::shared_ptr<Model> model = Model::createModelFromFile(liveDevice, "models/smooth_vase.obj");
+		std::shared_ptr<Model> model = Model::createModelFromFile(liveDevice, "models/flat_vase.obj");
 
 		auto loadedModel = Object::createObject();
 		loadedModel.model = model;
-		loadedModel.transform.translation = { 0.0f, 0.0f, 2.5f };
-		loadedModel.transform.scale = { 0.5f, 0.5f, 0.5f };
+		loadedModel.transform.translation = { 0.0f, 0.5f, 2.5f };
+		loadedModel.transform.scale = { 1.5f, 1.5f, 1.5f };
 
 		objects.push_back(std::move(loadedModel));
 	}
