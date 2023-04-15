@@ -1,5 +1,6 @@
 #pragma once
 
+#include "buffer.h"
 #include "engine_device.h"
 
 #define GLM_DEFINE_RADIANS
@@ -49,15 +50,13 @@ namespace live {
 		void createVertexBuffers(const std::vector<Vertex>& vertices);
 		void createIndexBuffers(const std::vector<uint32_t>& indices);
 
-		LiveDevice&    liveDevice;
+		LiveDevice&             liveDevice;
 
-		VkBuffer       vertexBuffer;
-		VkDeviceMemory vertexBufferMemory;
-		uint32_t       vertexCount;
+		std::unique_ptr<Buffer> vertexBuffer;
+		uint32_t                vertexCount;
 
-		bool           hasIndexBuffer = false;
-		VkBuffer       indexBuffer;
-		VkDeviceMemory indexBufferMemory;
-		uint32_t       indexCount;
+		bool                    hasIndexBuffer = false;
+		std::unique_ptr<Buffer> indexBuffer;
+		uint32_t                indexCount;
 	};
 }

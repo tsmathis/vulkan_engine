@@ -28,15 +28,7 @@ live::Model::Model(LiveDevice& device, const Model::Builder& builder) : liveDevi
 	createIndexBuffers(builder.indices);
 }
 
-live::Model::~Model() {
-	vkDestroyBuffer(liveDevice.device(), vertexBuffer, nullptr);
-	vkFreeMemory(liveDevice.device(), vertexBufferMemory, nullptr);
-
-	if (hasIndexBuffer) {
-		vkDestroyBuffer(liveDevice.device(), indexBuffer, nullptr);
-		vkFreeMemory(liveDevice.device(), indexBufferMemory, nullptr);
-	}
-}
+live::Model::~Model() {}
 
 std::unique_ptr<live::Model> live::Model::createModelFromFile(LiveDevice& device, const std::string& filepath) {
 	Builder builder{};
@@ -45,12 +37,12 @@ std::unique_ptr<live::Model> live::Model::createModelFromFile(LiveDevice& device
 }
 
 void live::Model::bind(VkCommandBuffer commandBuffer) {
-	VkBuffer buffers[] = { vertexBuffer };
+	VkBuffer buffers[] = { vertexBuffer->getBuffer()};
 	VkDeviceSize offsets[] = { 0 };
 	vkCmdBindVertexBuffers(commandBuffer, 0, 1, buffers, offsets);
 
 	if (hasIndexBuffer) {
-		vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindIndexBuffer(commandBuffer, indexBuffer->getBuffer(), 0, VK_INDEX_TYPE_UINT32);
 	}
 }
 
@@ -65,36 +57,29 @@ void live::Model::draw(VkCommandBuffer commandBuffer) {
 void live::Model::createVertexBuffers(const std::vector<Vertex>& vertices) {
 	vertexCount = static_cast<uint32_t>(vertices.size());
 	assert(vertexCount >= 3 && "Vertex count must be three or greater");
+	VkDeviceSize bufferSize = sizeof(vertices[0]) * vertexCount;
+	uint32_t vertexSize = sizeof(vertices[0]);
 
-	VkDeviceSize   bufferSize = sizeof(vertices[0]) * vertexCount;
-	VkBuffer       stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
-
-	liveDevice.createBuffer(
-		bufferSize,
+	Buffer stagingBuffer{
+		liveDevice,
+		vertexSize,
+		vertexCount,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		stagingBuffer,
-		stagingBufferMemory
-	);
+	};
 
-	void* data;
-	vkMapMemory(liveDevice.device(), stagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, vertices.data(), static_cast<size_t>(bufferSize));
-	vkUnmapMemory(liveDevice.device(), stagingBufferMemory);
+	stagingBuffer.map();
+	stagingBuffer.writeToBuffer((void*)vertices.data());
 
-	liveDevice.createBuffer(
-		bufferSize,
+	vertexBuffer = std::make_unique<Buffer>(
+		liveDevice,
+		vertexSize,
+		vertexCount,
 		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		vertexBuffer,
-		vertexBufferMemory
-	);
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+		);
 
-	liveDevice.copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
-
-	vkDestroyBuffer(liveDevice.device(), stagingBuffer, nullptr);
-	vkFreeMemory(liveDevice.device(), stagingBufferMemory, nullptr);
+	liveDevice.copyBuffer(stagingBuffer.getBuffer(), vertexBuffer->getBuffer(), bufferSize);
 }
 
 void live::Model::createIndexBuffers(const std::vector<uint32_t>& indices) {
@@ -105,35 +90,29 @@ void live::Model::createIndexBuffers(const std::vector<uint32_t>& indices) {
 		return;
 	}
 
-	VkDeviceSize   bufferSize = sizeof(indices[0]) * indexCount;
-	VkBuffer       stagingBuffer;
-	VkDeviceMemory stagingBufferMemory;
-
-	liveDevice.createBuffer(
-		bufferSize,
+	VkDeviceSize bufferSize = sizeof(indices[0]) * indexCount;
+	uint32_t     indexSize = sizeof(indices[0]);
+	
+	Buffer stagingBuffer{
+		liveDevice,
+		indexSize,
+		indexCount,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		stagingBuffer,
-		stagingBufferMemory
-	);
+		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+	};
 
-	void* data;
-	vkMapMemory(liveDevice.device(), stagingBufferMemory, 0, bufferSize, 0, &data);
-	memcpy(data, indices.data(), static_cast<size_t>(bufferSize));
-	vkUnmapMemory(liveDevice.device(), stagingBufferMemory);
+	stagingBuffer.map();
+	stagingBuffer.writeToBuffer((void*)indices.data());
 
-	liveDevice.createBuffer(
-		bufferSize,
+	indexBuffer = std::make_unique<Buffer>(
+		liveDevice,
+		indexSize,
+		indexCount,
 		VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		indexBuffer,
-		indexBufferMemory
-	);
+		VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+		);
 
-	liveDevice.copyBuffer(stagingBuffer, indexBuffer, bufferSize);
-
-	vkDestroyBuffer(liveDevice.device(), stagingBuffer, nullptr);
-	vkFreeMemory(liveDevice.device(), stagingBufferMemory, nullptr);
+	liveDevice.copyBuffer(stagingBuffer.getBuffer(), indexBuffer->getBuffer(), bufferSize);
 }
 
 std::vector<VkVertexInputBindingDescription> live::Model::Vertex::getBindingDescriptions() {
