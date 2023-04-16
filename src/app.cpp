@@ -60,6 +60,12 @@ namespace live {
 			
 			if (auto commandBuffer = renderer.beginFrame()) {
 				int frameIndex = renderer.getFrameINdex();
+				FrameInfo frameInfo{
+					frameIndex,
+					frameTime,
+					commandBuffer,
+					camera
+				};
 
 				//Update
 				GlobalUniformBufferObj uniformBufferObj{};
@@ -69,7 +75,7 @@ namespace live {
 
 				// Render
 				renderer.beginSwapChainRenderPass(commandBuffer);
-				renderSystem.renderObjects(commandBuffer, objects, camera);
+				renderSystem.renderObjects(frameInfo, objects);
 				renderer.endSwapChainRenderPass(commandBuffer);
 				renderer.endFrame();
 			}

@@ -5,6 +5,7 @@
 #include "live_pipeline.h"
 #include "model.h"
 #include "object.h"
+#include "frame_info.h"
 
 #include <memory>
 #include <vector>
@@ -19,7 +20,7 @@ namespace live {
 		RenderSystem(const RenderSystem&) = delete;
 		RenderSystem& operator=(const RenderSystem&) = delete;
 
-		void renderObjects(VkCommandBuffer commandBuffer, std::vector<Object>& objects, const Camera& camera);
+		void renderObjects(FrameInfo &frameInfo, std::vector<Object>& objects);
 
 	private:
 		void createPipelineLayout();
