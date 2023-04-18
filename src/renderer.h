@@ -38,6 +38,9 @@ namespace live {
 			return currentFrameIndex;
 		}
 
+		uint32_t getWidth() { return liveSwapChain->getSwapChainExtent().width; }
+		uint32_t getHeight() { return liveSwapChain->getSwapChainExtent().height; }
+
 	private:
 		void createCommandBuffers();
 		void freeCommandBuffers();

@@ -29,8 +29,8 @@ namespace live {
 		void initWindow();
 		static void frameBufferResizeCallback(GLFWwindow* window, int width, int height);
 
-		int width;
-		int height;
+		int  width;
+		int  height;
 		bool frameBufferResized = false;
 
 		std::string windowName;

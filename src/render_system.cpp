@@ -55,7 +55,8 @@ namespace live {
 	void RenderSystem::renderObjects(FrameInfo& frameInfo, std::vector<Object>& objects) {
 		livePipeline->bind(frameInfo.commandBuffer);
 
-		auto projectionView = frameInfo.camera.getProjectionMatrix() * frameInfo.camera.getViewMatrix();
+		//auto projectionView = frameInfo.camera.getProjectionMatrix() * frameInfo.camera.getViewMatrix();
+		auto projectionView = frameInfo.camera.getProjection();
 
 		int i = 0;
 		for (auto& obj : objects) {

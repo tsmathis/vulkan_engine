@@ -1,9 +1,113 @@
 #include "camera.h"
+#include "input/input.h"
+
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #include <cassert>
 #include <limits>
 
 
+
+live::Camera::Camera(float vFOV, float nearClip, float farClip) : _vFOV(vFOV), _nearClip(nearClip), _farClip(farClip) {
+	_forwardDirection = glm::vec3(0, 0, -1);
+	_position = glm::vec3(0, 0, 3);
+}
+
+void live::Camera::onUpdate(float timeStep) {
+	glm::vec2 mousePosition = Input::getMousePosition();
+	glm::vec2 mouseDelta = (mousePosition - _lastMousePosition) * 0.002f;
+
+	if (!Input::isMouseButtonDown(MouseButton::Right)) {
+		Input::setCursorMode(CursorMode::Normal);
+		return;
+	}
+
+	Input::setCursorMode(CursorMode::Locked);
+
+	bool moved = false;
+
+	constexpr glm::vec3 upDirection(0.0f, 1.0f, 0.0f);
+	glm::vec3 rightDirection = glm::cross(_forwardDirection, upDirection);
+
+	float speed = 5.0f;
+
+	// Movement
+	if (Input::isKeyDown(KeyCode::W)) {
+		_position += _forwardDirection * speed * timeStep;
+		moved = true;
+	} else if (Input::isKeyDown(KeyCode::S)) {
+		_position -= _forwardDirection * speed * timeStep;
+		moved = true;
+	}
+
+	if (Input::isKeyDown(KeyCode::A)) {
+		_position -= rightDirection * speed * timeStep;
+		moved = true;
+	}
+	else if (Input::isKeyDown(KeyCode::D)) {
+		_position += rightDirection * speed * timeStep;
+		moved = true;
+	}
+
+	if (Input::isKeyDown(KeyCode::Q)) {
+		_position -= upDirection * speed * timeStep;
+		moved = true;
+	}
+	else if (Input::isKeyDown(KeyCode::E)) {
+		_position += upDirection * speed * timeStep;
+		moved = true;
+	}
+
+	// Rotation
+	if (mouseDelta.x != 0.0f || mouseDelta.y != 0.0f) {
+		float pitchDelta = mouseDelta.y * getRotationSpeed();
+		float yawDelta = mouseDelta.x * getRotationSpeed();
+
+		glm::quat q = glm::normalize(glm::cross(glm::angleAxis(-pitchDelta, rightDirection),
+			glm::angleAxis(-yawDelta, glm::vec3(0.0F, 1.0F, 0.0F))));
+
+		_forwardDirection = glm::rotate(q, _forwardDirection);
+
+		moved = true;
+ 	}
+
+	if (moved) {
+		recalculateView();
+		recalculateProjection();
+	}
+
+}
+
+void live::Camera::onResize(uint32_t width, uint32_t height) {
+	if (width == _viewportWidth && height == _viewportHeight) { return;	}
+
+	_viewportWidth  = width;
+	_viewportHeight = height;
+
+	recalculateProjection();
+	recalculateView();
+}
+
+float live::Camera::getRotationSpeed() {
+	return 0.0f;
+}
+
+void live::Camera::recalculateProjection() {
+	_projection = glm::perspectiveFov(glm::radians(_vFOV), (float)_viewportWidth, (float)_viewportHeight, _nearClip, _farClip);
+	_inverseProjection = glm::inverse(_projection);
+}
+
+void live::Camera::recalculateView() {
+	_view = glm::lookAt(_position, _position + _forwardDirection, glm::vec3(0, 1, 0));
+	_inverseView = glm::inverse(_view);
+}
+
+
+
+
+/* Old stuff
 void live::Camera::setOrthographicProjection(float left, float right, float top, float bottom, float near, float far) {
 	projectionMatrix = glm::mat4{ 1.0f };
 	projectionMatrix[0][0] = 2.0f / (right - left);
@@ -76,3 +180,5 @@ void live::Camera::setViewYXZ(glm::vec3 position, glm::vec3 rotation) {
 	viewMatrix[3][1] = -glm::dot(v, position);
 	viewMatrix[3][2] = -glm::dot(w, position);
 }
+
+*/

@@ -19,6 +19,9 @@ namespace live {
 		Application();
 		~Application();
 
+		static Application& get();
+		GLFWwindow* getWindowHandle() const { return liveWindow.getGLFWwindow(); }
+
 		Application(const Application&) = delete;
 		Application& operator=(const Application&) = delete;
 
@@ -27,9 +30,9 @@ namespace live {
 	private:
 		void loadObjects();
 
-		LiveWindow                     liveWindow{WIDTH, HEIGHT, "Hello Vulkan"};
-		LiveDevice                     liveDevice{ liveWindow };
-		Renderer                       renderer{ liveWindow, liveDevice };
-		std::vector<Object>            objects;
+		LiveWindow          liveWindow{WIDTH, HEIGHT, "Hello Vulkan"};
+		LiveDevice          liveDevice{ liveWindow };
+		Renderer            renderer{ liveWindow, liveDevice };
+		std::vector<Object> objects;
 	};
 }

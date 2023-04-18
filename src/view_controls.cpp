@@ -1,7 +1,8 @@
-#include "keyboard_input.h"
+#include "view_controls.h"
 
 #include <limits>
 
+#include <iostream>
 
 void live::KeyboardInputController::moveInPlaneXZ(GLFWwindow* window, float dt, Object& object) {
 	glm::vec3 rotate{ 0 };

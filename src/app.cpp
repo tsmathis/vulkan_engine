@@ -1,7 +1,7 @@
 #include "app.h"
 
 #include "camera.h"
-#include "keyboard_input.h"
+#include "view_controls.h"
 #include "render_system.h"
 
 #define GLM_DEFINE_RADIANS
@@ -12,7 +12,10 @@
 #include <array>
 #include <chrono>
 #include <stdexcept>
+#include <iostream>
 
+
+static live::Application* instance = nullptr;
 
 namespace live {
 	struct GlobalUniformBufferObj {
@@ -20,9 +23,16 @@ namespace live {
 		glm::vec3 lightDirection = glm::normalize(glm::vec3{ 1.0f, -3.0f, -1.0f });
 	};
 
-	Application::Application() { loadObjects();	}
+	Application::Application() { 
+		instance = this;
+		loadObjects();	
+	}
 
-	Application::~Application() {}
+	Application::~Application() { instance = nullptr; }
+
+	Application& Application::get() {
+		return *instance;
+	}
 
 	void Application::run() {
 		Buffer globalUniformBuffer{
@@ -37,11 +47,13 @@ namespace live {
 		globalUniformBuffer.map();
 
 		RenderSystem renderSystem{liveDevice, renderer.getSwapChainRenderPass()};
-		Camera camera{};
-		camera.setViewTarget(glm::vec3(-1.0f, -2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 2.5f));
+		Camera camera(45.0f, 0.1f, 100.0f);
+
+		//camera.setViewTarget(glm::vec3(-1.0f, -2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 2.5f));
 
 		auto viewerObject = Object::createObject();
-		KeyboardInputController cameraController{};
+
+		//KeyboardInputController cameraController{};
 
 		auto currentTime = std::chrono::high_resolution_clock::now();
 
@@ -52,11 +64,14 @@ namespace live {
 			float frameTime = std::chrono::duration<float, std::chrono::seconds::period>(newTime - currentTime).count();
 			currentTime = newTime;
 
-			cameraController.moveInPlaneXZ(liveWindow.getGLFWwindow(), frameTime, viewerObject);
-			camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
+
+
+			//cameraController.moveInPlaneXZ(liveWindow.getGLFWwindow(), frameTime, viewerObject);
+			//camera.setViewYXZ(viewerObject.transform.translation, viewerObject.transform.rotation);
 
 			float aspect = renderer.getAspectRatio();
-			camera.setPerspectiveProjection(glm::radians(50.0f), aspect, 0.1f, 10.0f);
+			//camera.setPerspectiveProjection(glm::radians(50.0f), aspect, 0.1f, 10.0f);
+
 			
 			if (auto commandBuffer = renderer.beginFrame()) {
 				int frameIndex = renderer.getFrameINdex();
@@ -67,9 +82,16 @@ namespace live {
 					camera
 				};
 
-				//Update
+				camera.onResize(renderer.getWidth(), renderer.getHeight());
+				camera.onUpdate(frameTime);
+
+
+				// Update
 				GlobalUniformBufferObj uniformBufferObj{};
-				uniformBufferObj.projectionView = camera.getProjectionMatrix() * camera.getViewMatrix();
+
+				//uniformBufferObj.projectionView = camera.getProjectionMatrix() * camera.getViewMatrix();
+				uniformBufferObj.projectionView = camera.getProjection();
+				
 				globalUniformBuffer.writeToIndex(&uniformBufferObj, frameIndex);
 				globalUniformBuffer.flushIndex(frameIndex);
 
@@ -104,3 +126,4 @@ namespace live {
 		objects.push_back(std::move(smoothVase));
 	}
 }
+
